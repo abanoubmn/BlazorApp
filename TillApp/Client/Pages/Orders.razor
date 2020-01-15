@@ -26,7 +26,10 @@ else
                     <tr>
                         <td><NavLink class="nav-link" href="@string.Concat("order/",order.Id)">@order.OrderName</NavLink> </td>
                         <td>@order.Amount</td>
-                        <td><button class="btn btn-sm btn-info" @onclick="()=>setPaid(order)">Paid</button></td>
+                        <td>
+                            <button class="btn btn-sm btn-info" @onclick="()=>setPaid(order)">Paid</button>
+                            <NavLink class="btn btn-sm btn-info" href="@string.Concat("order/",order.Id)" >Edit</NavLink>
+                        </td>
                     </tr>
                 }
             </tbody>
