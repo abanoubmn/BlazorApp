@@ -11,6 +11,10 @@
         <div class="form-group row">
             <label for="orderName" class="control-label">Order name:</label>
             <input id="orderName" required class="form-control-sm" @bind="newOrder.OrderName" placeholder="Order name" />
+            @if (showAstrsk)
+            {
+                <label class="text-danger">*</label>
+            }
             <label for="total" class="control-label">Total:</label>
             <input id="total" class="form-control-sm disabled" @bind="newOrder.Amount" disabled placeholder="Total" />
         </div>
@@ -70,7 +74,7 @@
     private ProductDto[] products;
     private List<OrderItemDto> orderItems = new List<OrderItemDto>();
     private OrderDto newOrder = new OrderDto();
-
+    private bool showAstrsk;
     protected override async Task OnInitializedAsync()
     {
         products = await Http.GetJsonAsync<ProductDto[]>("api/product");
@@ -128,10 +132,15 @@
     private async Task postOrder()
     {
         newOrder.OrderItem = orderItems;
-        if (newOrder.Id == 0)
-            await Http.PostJsonAsync("api/order", newOrder);
+        if (string.IsNullOrEmpty(newOrder.OrderName))
+            showAstrsk = true;
         else
-            await Http.PutJsonAsync("api/order", newOrder);
-        navManager.NavigateTo("order");
+        {
+            if (newOrder.Id == 0)
+                await Http.PostJsonAsync("api/order", newOrder);
+            else
+                await Http.PutJsonAsync("api/order", newOrder);
+            navManager.NavigateTo("order");
+        }
     }
 }
