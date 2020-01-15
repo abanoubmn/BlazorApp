@@ -1,0 +1,50 @@
+﻿@page "/"
+@page "/order"
+@using TillApp.Shared.Dtos
+@inject HttpClient Http
+
+<h1>Orders</h1>
+
+@if (orders == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-centered table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Order Name </th>
+                    <th>Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td><NavLink class="nav-link" href="@string.Concat("order/",order.Id)">@order.OrderName</NavLink> </td>
+                        <td>@order.Amount</td>
+                        <td><button class="btn btn-sm btn-info" @onclick="()=>setPaid(order)">Paid</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<OrderDto> orders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        orders = await Http.GetJsonAsync<List<OrderDto>>("api/order");
+    }
+
+    private async Task setPaid(OrderDto order)
+    {
+        await Http.GetAsync("api/order/setispaid/" + order.Id);
+        orders.Remove(order);
+    }
+}

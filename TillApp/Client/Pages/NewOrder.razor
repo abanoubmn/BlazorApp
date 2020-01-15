@@ -1,0 +1,137 @@
+﻿@page "/new-order"
+@page "/order/{Id:int}"
+@using TillApp.Shared.Dtos
+@inject HttpClient Http
+@inject NavigationManager navManager
+
+<h4>New order</h4>
+
+<div class="row pb-1 mb-2">
+    <div class=" was-validated" role="form">
+        <div class="form-group row">
+            <label for="orderName" class="control-label">Order name:</label>
+            <input id="orderName" required class="form-control-sm" @bind="newOrder.OrderName" placeholder="Order name" />
+            <label for="total" class="control-label">Total:</label>
+            <input id="total" class="form-control-sm disabled" @bind="newOrder.Amount" disabled placeholder="Total" />
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-5">
+        <div class="table-responsive">
+            <table class="table table-centered table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Item </th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in orderItems)
+                    {
+                        <tr>
+                            <td>@item.ProductName</td>
+                            <td><input class="form-control-sm" @bind="item.Price" @oninput="(e)=>priceChangeHandler(e.Value.ToString(),item)" /></td>
+                            <td>@item.Quantity</td>
+                            <td><button class="btn btn-sm btn-info" @onclick="()=>removeProduct(item)"><span class="oi oi-minus" aria-hidden="true"></span></button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-sm-7">
+        <div class="card m-1 p-1">
+            <div class="row">
+                @if (products == null)
+                {
+                    <div class="col-sm-12"> <p><em>Loading...</em></p></div>
+                }
+                else
+                {
+                    foreach (var product in products)
+                    {
+                        <div class="col-xl-3 col-md-6 mb-1">
+                            <button class="btn btn-outline-primary waves-effect waves-light col-sm-12" @onclick="()=>addProduct(product)">@product.Name @product.Price.ToString("0.00")</button>
+                        </div>
+                    }
+                }
+            </div>
+            <button class="btn btn-primary" @onclick="postOrder">Place Order</button>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ProductDto[] products;
+    private List<OrderItemDto> orderItems = new List<OrderItemDto>();
+    private OrderDto newOrder = new OrderDto();
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await Http.GetJsonAsync<ProductDto[]>("api/product");
+    }
+
+    private async Task getOrder()
+    {
+        newOrder = await Http.GetJsonAsync<OrderDto>("api/order/" + Id);
+        orderItems = newOrder.OrderItem.ToList();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id == 0)
+        {
+            newOrder = new OrderDto();
+            orderItems = new List<OrderItemDto>();
+        }
+        else
+            await getOrder();
+    }
+
+    private void priceChangeHandler(string price, OrderItemDto orderItem)
+    {
+        decimal priceOut = 0;
+        orderItem.Price = decimal.TryParse(price, out priceOut) ? priceOut : orderItem.Price;
+        newOrder.Amount = orderItems.Sum(x => x.Price * x.Quantity);
+    }
+
+    private void addProduct(ProductDto product)
+    {
+        if (orderItems.Any(x => x.ProductId == product.Id))
+        {
+            foreach (var item in orderItems.Where(x => x.ProductId == product.Id))
+            {
+                item.Quantity++;
+            }
+        }
+        else
+            orderItems.Add(new OrderItemDto() { ProductName = product.Name, Price = product.Price, ProductId = product.Id, Quantity = 1 });
+        newOrder.Amount = orderItems.Sum(x => x.Price * x.Quantity);
+    }
+
+    private void removeProduct(OrderItemDto item)
+    {
+        if (item.Quantity > 1)
+        {
+            item.Quantity--;
+        }
+        else
+            orderItems.Remove(item);
+        newOrder.Amount = orderItems.Sum(x => x.Price * x.Quantity);
+    }
+
+    private async Task postOrder()
+    {
+        newOrder.OrderItem = orderItems;
+        if (newOrder.Id == 0)
+            await Http.PostJsonAsync("api/order", newOrder);
+        else
+            await Http.PutJsonAsync("api/order", newOrder);
+        navManager.NavigateTo("order");
+    }
+}
